@@ -13,44 +13,42 @@ export async function POST(req) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    // Simpan CSV sementara
+    // save csv temp
+    const tempDir = os.tmpdir();
+    const inputPath = path.join(tempDir, `input-${Date.now()}.csv`);
+    const outputPath = path.join(tempDir, `output-${Date.now()}.xlsx`);
+
     const buffer = Buffer.from(await file.arrayBuffer());
-    const tempCsvPath = path.join(os.tmpdir(), file.name);
-    await writeFile(tempCsvPath, buffer);
+    await writeFile(inputPath, buffer);
 
-    // Output sementara
-    const outputPath = path.join(os.tmpdir(), "output.xlsx");
-
-    // Path script Python
-    const scriptPath = path.join(process.cwd(), "src", "scripts", "convert.py");
-
-    console.log(">>> Run Python:", scriptPath, tempCsvPath, outputPath);
-
-    // Jalankan Python
+    // run python convert.py
     await new Promise((resolve, reject) => {
-      const py = spawn("python3", [scriptPath, tempCsvPath, outputPath]);
+      const py = spawn("python3", [
+        path.join(process.cwd(), "src","convert.py"),
+        inputPath,
+        outputPath,
+      ]);
 
-      py.stdout.on("data", (data) => console.log("PY:", data.toString()));
-      py.stderr.on("data", (err) => console.error("PYERR:", err.toString()));
-
+      py.stdout.on("data", (data) => console.log("PYTHON:", data.toString()));
+      py.stderr.on("data", (data) => console.error("PYTHON ERR:", data.toString()));
       py.on("close", (code) => {
         if (code === 0) resolve();
-        else reject(new Error(`Python exited with code ${code}`));
+        else reject(new Error("Python script failed"));
       });
     });
 
-    // Pastikan output ada
-    const outputBuffer = await readFile(outputPath);
+    // baca hasil excel
+    const excelBuffer = await readFile(outputPath);
 
-    return new NextResponse(outputBuffer, {
+    return new NextResponse(excelBuffer, {
+      status: 200,
       headers: {
-        "Content-Type":
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": 'attachment; filename="output.xlsx"',
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": 'attachment; filename="converted.xlsx"',
       },
     });
-  } catch (error) {
-    console.error("API ERROR:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (err) {
+    console.error(">>> API Error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
