@@ -13,28 +13,33 @@ export async function POST(req) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    // Simpan CSV ke file sementara
+    // Simpan CSV sementara
     const buffer = Buffer.from(await file.arrayBuffer());
     const tempCsvPath = path.join(os.tmpdir(), file.name);
     await writeFile(tempCsvPath, buffer);
 
-    // Lokasi output Excel
+    // Output sementara
     const outputPath = path.join(os.tmpdir(), "output.xlsx");
 
-    // Jalankan script Python
+    // Path script Python
+    const scriptPath = path.join(process.cwd(), "src", "scripts", "convert.py");
+
+    console.log(">>> Run Python:", scriptPath, tempCsvPath, outputPath);
+
+    // Jalankan Python
     await new Promise((resolve, reject) => {
-      const py = spawn("python3", ["../../scripts/convert.py", tempCsvPath]);
+      const py = spawn("python3", [scriptPath, tempCsvPath, outputPath]);
 
       py.stdout.on("data", (data) => console.log("PY:", data.toString()));
       py.stderr.on("data", (err) => console.error("PYERR:", err.toString()));
 
       py.on("close", (code) => {
         if (code === 0) resolve();
-        else reject(new Error(`Python process exited with code ${code}`));
+        else reject(new Error(`Python exited with code ${code}`));
       });
     });
 
-    // Baca file hasil dari Python
+    // Pastikan output ada
     const outputBuffer = await readFile(outputPath);
 
     return new NextResponse(outputBuffer, {
@@ -46,6 +51,6 @@ export async function POST(req) {
     });
   } catch (error) {
     console.error("API ERROR:", error);
-    return NextResponse.json({ error: "Failed to convert CSV" }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
