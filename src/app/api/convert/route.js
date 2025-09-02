@@ -47,30 +47,6 @@ export async function POST(req) {
     styleCell(totalHeader);
 
     // ===== Process Data Rows =====
-    // worksheet.eachRow((row, rowNumber) => {
-    //   if (rowNumber === 1) return; // skip header
-
-    //   // Convert string number with comma ke number
-    //   row.eachCell((cell) => {
-    //     if (cell.value && typeof cell.value === 'string') {
-    //       const numeric = Number(String(cell.value).replace(/,/g, ''));
-    //       if (!isNaN(numeric)) {
-    //         cell.value = numeric;
-    //       }
-    //     }
-    //   });
-
-    //   // Total Rev sebagai formula
-    //   row.getCell(lastCol).value = { 
-    //     formula: `SUM(G${rowNumber},I${rowNumber},M${rowNumber},P${rowNumber},S${rowNumber},V${rowNumber})`, 
-    //     result: 0 
-    //   };
-
-    //   styleRowBorder(row);
-    // });
-
-
-    // ===== Process Data Rows =====
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return; // skip header
 
